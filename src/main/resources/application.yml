@@ -1,0 +1,24 @@
+micronaut:
+    application:
+        name: basket-demo
+
+jackson:
+    serialization:
+        indentOutput: true
+        writeDatesAsTimestamps: false
+    deserialization:
+        useBigIntegerForInts: true
+        failOnUnknownProperties: false
+
+cassandra:
+    default:
+        clusterName: "${CASSANDRA_CLUSTERNAME:Test Cluster}"
+        contactPoint: "${CASSANDRA_CONTACTPOINT:localhost}"
+        port: "${CASSANDRA_PORT:9042}"
+        maxSchemaAgreementWaitSeconds: 30
+        ssl: false
+
+elasticsearch:
+    scheme: http
+    host: localhost
+    port: 9200
