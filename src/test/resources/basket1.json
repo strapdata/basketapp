@@ -1,0 +1,23 @@
+{
+  "id": "fe2ace53-69d6-4f11-93b1-e0fde68a95cc",
+  "store_code": "1",
+  "basket_status": "Finished",
+  "processing_date": 1551773163133,
+  "items": [
+    {
+      "product_qty": 1,
+      "amount_paid": 1,
+      "product_code": "1"
+    },
+    {
+      "product_qty": 2,
+      "amount_paid": 2,
+      "product_code": "2"
+    },
+    {
+      "product_qty": 3,
+      "amount_paid": 3,
+      "product_code": "3"
+    }
+  ]
+}

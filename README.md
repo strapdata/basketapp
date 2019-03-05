@@ -1,16 +1,50 @@
-# Elassandra Junit5 tests with Micronaut
+# Testing reactive microservices with Micronaut, Elassandra and JUnit5
 
-Micronaut is a new JVM-based framework designed to make creating microservices quick and easy. One of the most exciting
-features of Micronaut is its support for reactive programming and we will see in this article how to store and search
-data in Elassandra in a reactive way through the CQL driver and run unit tests with Junit5.
+[Micronaut](https://micronaut.io/) is a new JVM-based framework designed to make creating microservices quick and easy. One of the most exciting
+features of Micronaut is its support for [reactive programming](http://reactivex.io/) and we will see in this article how to store and search
+data in [Elassandra](https://www.elassandra.io/) in a reactive way through the Cassandra driver and run unit tests with Junit5.
 
-To illustrate 
+![mirconaut-elassandra-junit5](images/micronaut-elassandra-junit5.png)
 
-# Cassandra object mapping
+To illustrate these features, here is a basic demo application **basketapp** (available on [github](https://github.com/strapdata/basketapp)), 
+storing sales receipt in Elassandra, that is, stored in Cassandra and automatically indexed in Elasticsearch. A REST service implemented as a Micronaut 
+controller expose endpoints to retrieve sales receipts by id or by store and product code. 
+
+Here a basic JSON sales receipt with 3 products items:
+
+```json
+{
+  "id": "fe2ace53-69d6-4f11-93b1-e0fde68a95cc",
+  "store_code": "1",
+  "basket_status": "Finished",
+  "processing_date": 1551773163133,
+  "items": [
+    {
+      "product_qty": 1,
+      "amount_paid": 1,
+      "product_code": "1"
+    },
+    {
+      "product_qty": 2,
+      "amount_paid": 2,
+      "product_code": "2"
+    },
+    {
+      "product_qty": 3,
+      "amount_paid": 3,
+      "product_code": "3"
+    }
+  ]
+}
+```
+
+## Cassandra object mapping
 
 In order to handle conversion between Cassandra types and custom Java object and generate CQL queries,
-the Cassandra mapper provided with the java Cassandra driver. By combining Jackson, Lombok and Cassandra java annotations in 
-the Basket POJO object, we get both JSON serialization and Cassandra storage.
+the java Cassandra driver provides a [Cassandra mapper](https://docs.datastax.com/en/developer/java-driver/3.5/manual/object_mapper/using/).
+By combining [Jackson](https://github.com/FasterXML/jackson),
+[Lombok](https://projectlombok.org/) and Cassandra mapper java annotations in 
+the Basket POJO object, we get both JSON serialization and Cassandra Data Access Object.
 
 ```java
 @Table(name = "baskets",
@@ -46,7 +80,7 @@ public class Basket {
 }
 ```
 
-Thes *BasketItem* is mapped to a Cassandra User Defined Type as follow:
+In the same way, the **BasketItem** is mapped to a [Cassandra User Defined Type](https://docs.datastax.com/en/cql/3.3/cql/cql_using/useCreateUDT.html) as shown bellow:
  
 ````java
 @UDT(name="basket_item")
@@ -73,10 +107,10 @@ public class BasketItem {
 }
 ````
 
-Finally, **BascketStatus**, a java enum, is managed through a registred Codec as described in the 
+Finally, **BascketStatus**, a java enum, is managed through a registred codec as described in the 
 [driver documentation](https://docs.datastax.com/en/developer/java-driver/3.5/manual/custom_codecs/extras/#Enums) 
 
-Unfortunately, the java Cassandra mapper cannot generate the CQL schema, so we need to manage it manually:
+Unfortunately, the java Cassandra mapper cannot generate the CQL schema, so we need to write it manually:
 
 ```bash
 CREATE TYPE IF NOT EXISTS basket_item (
@@ -98,16 +132,44 @@ CREATE TABLE IF NOT EXISTS baskets (
 );
 ```
 
-# Elasticsearch query over CQL
+To manage [CQL mappers](https://docs.datastax.com/en/developer/java-driver/3.5/manual/object_mapper/)  
+and initialize the CQL schema and Elasticsearch indices, we use a Micronaut bean [ElassandraStorage](https://github.com/strapdata/basketapp/blob/master/src/main/java/com/strapdata/basketapp/ElassandraStorage.java).
+that use the [Elasticsearch REST Client](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-create-index.html) java API.
+To put it simply, we have run an [Elassandra discover](https://elassandra.readthedocs.io/en/latest/mapping.html#bi-directional-mapping) 
+through the [Create Index API](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-create-index.html) 
+to create the Elasticsearch index **baskets** with a mapping automatically generated from the CQL schema.
 
-Elassandra closely integrates the Elasticsearch code and since version 6.2.3.11+ provides supports for Elasticsearch query 
-over the Cassandra driver is opensource, meaning that you can query Elasticsearch through the various CQL driver implementations.
 
-Dummy Cassandra columns **es_query** and **es_options** allow to send elasticsearch search request to the Elassandra coordinator nodes 
-and retreive results as a Cassandra rows, and the Cassandra [Accessors](https://docs.datastax.com/en/developer/java-driver/3.5/manual/object_mapper/using/#Accessors)
+## Elasticsearch query over CQL
+
+Elassandra closely integrates the Elasticsearch code and since version 6.2.3.11+, support for Elasticsearch query 
+over the Cassandra driver is opensource, meaning that you can query Elasticsearch through the various CQL driver implementations, with
+several advantages:
+* Reuse the same DAO's in your application when retrieving data from Cassandra or Elasticsearch.
+* No JSON overhead, query results are sent back to the application in binary.
+* The CQL paging automatically manages Elasticsearch scrolling, and the last page close the scroll context.
+* The CQL driver acts as a load balancer and know about load and availability of Elassandra nodes.
+* When authentication is enabled, the CQL driver manage authentication at a session level while per HTTP request authentication involve an overhead.
+
+To send the Elasticsearch search requests to an Elassandra coordinator node, we need two dummy Cassandra 
+columns **es_query** and **es_options**. The Elasticsearch results comes back as Cassandra rows:
+
+```sql
+Connected to Test Cluster at 127.0.0.1:9042.
+[cqlsh 5.0.1 | Cassandra 3.11.3.5 | CQL spec 3.4.4 | Native protocol v4]
+Use HELP for help.
+admin@cqlsh> SELECT * FROM baskets."_doc" WHERE es_query='{"query":{"term":{"basket_status":"Finished"}}}';
+
+ id                                   | basket_status | es_query | items                                                                                                                                                                             | processing_date | store_code
+--------------------------------------+---------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+------------
+ fe2ace53-69d6-4f11-93b1-e0fde68a95cc |  ['Finished'] |     null | [{amount_paid: [1], product_qty: [1], product_code: ['1']}, {amount_paid: [2], product_qty: [2], product_code: ['2']}, {amount_paid: [3], product_qty: [3], product_code: ['3']}] | [1551773163133] |      ['1']
+
+(1 rows)
+```
+
+The Cassandra [Accessors](https://docs.datastax.com/en/developer/java-driver/3.5/manual/object_mapper/using/#Accessors)
 annotation provides a nice way to map such custom queries. 
-
-Then a static helper method based on the elasticsearch REST client API provides an easy way to build Elasticsearch queries.
+The CQL LIMIT clause manage the number of results returned, equivalent to the Elasticsearch query size.
 
 ```java
 @Accessor
@@ -134,13 +196,18 @@ public interface BasketAccessor {
 }
 ```
 
-# Miconaut Reactive Data Access
+A static helper method based on the 
+[Elasticsearch REST High-Level](https://www.elastic.co/guide/en/elasticsearch/client/java-rest/current/java-rest-high-getting-started-initialization.html) 
+API provides an easy way to build Elasticsearch queries, here a boolean query with two clauses, a term query and a nested query.
 
-Micronaut use the RxJava2 as the as the implementation for the non-blocking I/O Reactive Streams API by default, and as said in the 
+## Micronaut Reactive Data Access
+
+Micronaut use the [RxJava2](https://github.com/ReactiveX/RxJava) as the as the implementation for the non-blocking I/O Reactive Streams API by default, and as said in the 
 documentation, if your controller method returns a non-blocking type then Micronaut will use the Event loop thread 
 to subscribe to the result. 
 
-In our Micronaut basket controller, ListenableFuture returned by the Cassandra driver is converted to reactive types such as Single or Observable.
+In our Micronaut basket controller, [ListenableFutures](https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/ListenableFuture.html) 
+returned by the Cassandra driver are converted to reactive types such as Single or Observable. 
 
 ```java
 @Controller("/basket")
@@ -175,17 +242,26 @@ public class BasketController {
 }
 ```
 
-The TransformedListenableFuture wraps the ListenableFuture<Result<X>> to convert the result by applying a mapper function, here Result::all. 
+The [TransformedListenableFuture](https://github.com/strapdata/basketapp/blob/master/src/main/java/com/strapdata/basketapp/utils/TransformedListenableFuture.java)
+wraps the ListenableFuture<Result<X>> to convert the result by applying a mapper function, 
+here [Result::all](https://docs.datastax.com/en/drivers/java/3.5/index.html?com/datastax/driver/mapping/Mapper.html). 
  
-# Junit5 Elassandra Tests
+## Junit5 Elassandra Tests
 
 The [Micronaut Testing Framework extensions](https://micronaut-projects.github.io/micronaut-test/latest/guide/index.html#introduction) 
-included support for [JUnit 5](https://junit.org/junit5/), the next generation of JUnit.
+included support for [JUnit 5](https://junit.org/junit5/), the next generation of JUnit. To test our Cassandra
+and Elasticsearch queries, we wanted to use [Elassandra-Unit](https://github.com/strapdata/elassandra-unit) to run
+an embedded Elassandra node during unit tests.
+
+![Elassandra-Unit](images/elassandra-unit.png)
 
 Nevertheless, in order to use the [Elassandra-Unit](https://github.com/strapdata/elassandra-unit) based on Junit 4, 
-we need to implements some Junit 5 extensions to trigger before and after test operations. First, an ElassandraCQLUnit5 extension
-to start an embedded Elassandra node where we set the system property **cassandra.custom_query_handler_class** to 
-to enable support for Elasticsearch query over CQL.
+we need to implements some Junit 5 extensions to trigger before and after test operations. 
+
+First, an ElassandraCQLUnit5 extension to start an embedded Elassandra node 
+where we set the Cassandra system property **cassandra.custom_query_handler_class** to 
+to enable support for Elasticsearch query over CQL. This could be done in the **build.gradle**, but it won't be set when
+launching tests from IntelliJ IDEA, so this is more practical like that.
 
 ```Java
 public class ElassandraCQLUnit5 extends CassandraCQLUnit implements BeforeEachCallback, AfterEachCallback {
@@ -210,7 +286,7 @@ public class ElassandraCQLUnit5 extends CassandraCQLUnit implements BeforeEachCa
 ```
 
 Then, our **BasketControllerTest** also implements a JUnit5 extension to open and cleanup Elassandra node before and 
-after each tests. The **testElassandraStorage** test our elasticsearch nested query on baskets.
+after each tests. The **testElassandraStorage** tests our elasticsearch nested query on the baskets index.
 
 ```Java
 @MicronautTest
@@ -288,9 +364,108 @@ public class BasketControllerTest implements BeforeEachCallback, AfterEachCallba
     }
     
     ...
-}```
-                                                         
+}
+```
+
+Elassandra-Unit (like [Cassandra-Unit](https://github.com/jsevellec/cassandra-unit) developed by Jeremy Sevellec) 
+use the CQL port **9142** (not the default 9042/tcp) and cluster name **"Test Cluster"** (defined in a resource file of elassandra-unit), 
+the **test/resources/application.yaml** :
+
+```yaml
+cassandra:
+    default:
+        clusterName: "Test Cluster"
+        contactPoint: localhost
+        port: 9142
+        maxSchemaAgreementWaitSeconds: 30
+        ssl: false
+```
+
+Finally, tests are successful with our embedded Elassandra node:
+
+![Elassandra-basketapp-jacoco](images/basketapp-jacoco-report.png)
+
+## Kubernetes deployment
+
+As a takeway, the [gradle JIB plugin](https://github.com/GoogleContainerTools/jib) quickly containerize the **basketapp**
+application and publish the docker image to a docker registry:
+
+```bash
+./gradlew clean jib --image strapdata/basketapp:0.1
+```
+
+Then, you can deploy both Elassandra (Using the [Elassandra HELM Chart](https://github.com/strapdata/helm-charts)) and 
+the **basketapp** on Kubernetes with a service and a deployment:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: basketapp
+  name: basketapp
+  namespace: default
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    name: basketapp
+  selector:
+    app: basketapp
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: basketapp-deployment
+  labels:
+    app: basketapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: basketapp
+  template:
+    metadata:
+      labels:
+        app: basketapp
+    spec:
+      imagePullSecrets:
+      - name: acr-auth
+      containers:
+      - name: basketapp
+        image: strapdata/basketapp:0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: CASSANDRA_CLUSTERNAME
+          value: elassandra
+        - name: CASSANDRA_CONTACTPOINT
+          value: ela-cassandra
+        - name: ELASTICSEARCH_HOST
+          value: ela-elasticsearch
+```
+
+You can also deploy Kibana for reporting and Traefik to expose the basketapp service: 
+
+![Kubernetes-elassandra-traefik](images/kubernetes-elassandra-traefik.png)
+
+# Conclusion
+
+Et voilà, you get a reliable, reactive and efficient REST micro-service. Data integration tests 
+are very useful in terms of making sure that our code runs correctly up to the database, and
+Elassandra-Unit helps you to check both Cassandra and Elasticsearch queries.
+
+Next step is to run automated integration tests, and Kubernetes can help to dynamically create a whole
+environment and discard it afterward. You can have a look at 
+the [Elassandra HELM charts](https://github.com/strapdata/helm-charts) for that.
+
+Finally, this architecture is easy to scale by adding nodes (app or Elassandra pods), 
+always up during node failures or rolling upgrades. No more database to Elasticsearch synchronization 
+headache, Elassandra properly index your Cassandra data into Elasticsearch !
 
 
-# Kuberentes deployment
 

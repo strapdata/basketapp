@@ -1,6 +1,6 @@
 micronaut:
     application:
-        name: basket-demo
+        name: basketapp
 
 jackson:
     serialization:
@@ -19,6 +19,6 @@ cassandra:
         ssl: false
 
 elasticsearch:
-    scheme: http
-    host: localhost
-    port: 9200
+    scheme: "${ELASTICSEARCH_SCHEME:http}"
+    host: "${ELASTICSEARCH_HOST:localhost}"
+    port: "${ELASTICSEARCH_PORT:9200}"

@@ -9,6 +9,7 @@ plugins {
     id "com.google.osdetector" version "1.6.1"
     id "com.gorylenko.gradle-git-properties" version "2.0.0"
     id 'com.google.cloud.tools.jib' version '1.0.1'
+    id 'jacoco'
 }
 
 version "0.1"
@@ -77,16 +78,28 @@ dependencies {
     compile(group: 'com.datastax.cassandra', name:'cassandra-driver-extras', version: '3.5.1') { exclude group:  'com.google.guava', module: 'guava' }
     compile group: 'org.elasticsearch.client', name:'elasticsearch-rest-high-level-client', version: '6.2.3'
 
-    testCompile(group: 'com.strapdata.elassandraunit', name:'elassandra-unit-spring', version: '3.5.0.2-SNAPSHOT') {
+    testCompile(group: 'com.strapdata.elassandraunit', name:'elassandra-unit-spring', version: '3.5.0.2') {
         exclude group: 'com.strapdata.elassandraunit', module: 'elassandra-unit'
     }
-    testCompile group: 'com.strapdata.elassandraunit', name:'elassandra-unit', version: '3.5.0.2-SNAPSHOT'
+    testCompile group: 'com.strapdata.elassandraunit', name:'elassandra-unit', version: '3.5.0.2'
 
     compile group: 'org.codehaus.jackson', name: 'jackson-core-asl', version: '1.9.13'
 }
 
 shadowJar {
     mergeServiceFiles()
+}
+
+jacoco {
+    reportsDir = file("$buildDir/customJacocoReportDir")
+}
+
+jacocoTestReport {
+    reports {
+        html.enabled = true
+        xml.enabled = true
+        csv.enabled = false
+    }
 }
 
 run.classpath += configurations.developmentOnly
