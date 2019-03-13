@@ -82,7 +82,7 @@ public class Basket {
 
 In the same way, the **BasketItem** is mapped to a [Cassandra User Defined Type](https://docs.datastax.com/en/cql/3.3/cql/cql_using/useCreateUDT.html) as shown bellow:
  
-````java
+```java
 @UDT(name="basket_item")
 @Data
 @Builder
@@ -105,11 +105,10 @@ public class BasketItem {
     @JsonProperty("product_code")
     private String productCode;
 }
-````
+```
 
 Finally, **BascketStatus**, a java enum, is managed through a registred codec as described in the 
-[driver documentation](https://docs.datastax.com/en/developer/java-driver/3.5/manual/custom_codecs/extras/#Enums) 
-
+[driver documentation](https://docs.datastax.com/en/developer/java-driver/3.5/manual/custom_codecs/extras/#Enums). 
 Unfortunately, the java Cassandra mapper cannot generate the CQL schema, so we need to write it manually:
 
 ```bash
@@ -202,9 +201,9 @@ API provides an easy way to build Elasticsearch queries, here a boolean query wi
 
 ## Micronaut Reactive Data Access
 
-Micronaut use the [RxJava2](https://github.com/ReactiveX/RxJava) as the as the implementation for the non-blocking I/O Reactive Streams API by default, and as said in the 
-documentation, if your controller method returns a non-blocking type then Micronaut will use the Event loop thread 
-to subscribe to the result. 
+Micronaut supports any framework that implements Reactive Streams, including RxJava, and Reactor.
+As said in the documentation, if your controller method returns a non-blocking type then Micronaut will use the Event 
+loop thread to subscribe to the result. 
 
 In our Micronaut basket controller, [ListenableFutures](https://google.github.io/guava/releases/21.0/api/docs/com/google/common/util/concurrent/ListenableFuture.html) 
 returned by the Cassandra driver are converted to reactive types such as Single or Observable. 
