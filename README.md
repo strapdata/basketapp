@@ -154,16 +154,16 @@ To send the Elasticsearch search requests to an Elassandra coordinator node, we 
 columns **es_query** and **es_options**. The Elasticsearch results comes back as Cassandra rows:
 
 ```sql
-Connected to Test Cluster at 127.0.0.1:9042.
 [cqlsh 5.0.1 | Cassandra 3.11.3.5 | CQL spec 3.4.4 | Native protocol v4]
 Use HELP for help.
-admin@cqlsh> SELECT * FROM baskets."_doc" WHERE es_query='{"query":{"term":{"basket_status":"Finished"}}}';
+admin@cqlsh> SELECT * FROM baskets.baskets WHERE es_query='{"query":{"term":{"basket_status":"Finished"}}}';
 
- id                                   | basket_status | es_query | items                                                                                                                                                                             | processing_date | store_code
---------------------------------------+---------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+------------
- fe2ace53-69d6-4f11-93b1-e0fde68a95cc |  ['Finished'] |     null | [{amount_paid: [1], product_qty: [1], product_code: ['1']}, {amount_paid: [2], product_qty: [2], product_code: ['2']}, {amount_paid: [3], product_qty: [3], product_code: ['3']}] | [1551773163133] |      ['1']
+ id                                   | basket_status | es_options | es_query | items                                                                                                                                                           | processing_date                 | store_code | total_paid
+--------------------------------------+---------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------+------------+------------
+ fe2ace53-69d6-4f11-93b1-e0fde68a95cc |      Finished |       null |     null | [{product_code: '1', product_qty: 1, amount_paid: 1}, {product_code: '2', product_qty: 2, amount_paid: 2}, {product_code: '3', product_qty: 3, amount_paid: 3}] | 2019-03-05 08:06:03.133000+0000 |          1 |       null
 
 (1 rows)
+admin@cqlsh>
 ```
 
 The Cassandra [Accessors](https://docs.datastax.com/en/developer/java-driver/3.5/manual/object_mapper/using/#Accessors)
