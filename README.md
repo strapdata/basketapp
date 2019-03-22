@@ -1,3 +1,37 @@
+This is a sample project to illustrate this [Medium article](https://medium.com/@vroyer/testing-reactive-microservices-with-micronaut-elassandra-and-junit5-970963f652bb)
+
+# How to use
+
+* To run the sample described in the article (see below) by the test, simple run `gradlew test` with a **java 8** version
+* If you want to run this sample as an application :
+    * Start an Elassandra cluster by following [this documentation](http://doc.elassandra.io/en/latest/installation.html#connect-to-cassandra-from-an-application-in-another-docker-container) 
+        * > If you use the docker way, 
+          >  * don't forget to expose the used ports (see applciation.yml) : add `-p 9042:9042 -p 9200:9200` to your **docker run** cmd
+          >  * activate the ElasticQueryHandler by adding : `-e JVM_OPTS="-Dcassandra.custom_query_handler_class=org.elassandra.index.ElasticQueryHandler"`
+          >  ```shell
+          >      docker run --name some-elassandra --rm -p 9042:9042 -p 9200:9200 -e JVM_OPTS="-Dcassandra.custom_query_handler_class=org.elassandra.index.ElasticQueryHandler" -dti strapdata/elassandra:latest
+          >  ```
+    * When your cluster is running 
+        * insert the baskets data (under src/test/resources/basket1.json) into elassandra db : 
+            * enter the cqlsh CLI by running `docker exec -it some-elassandra cqlsh`
+            * exec an INSERT INTO instruction with the JSON file content :
+        
+            ```sql
+              INSERT INTO baskets.baskets JSON '{   "id": "fe2ace53-69d6-4f11-93b1-e0fde68a95cc",   "store_code": "1",   "basket_status": "Finished",   "processing_date": 1551773163133,   "items": [     {       "product_qty": 1,       "amount_paid": 1,       "product_code": "1"     },     {       "product_qty": 2,       "amount_paid": 2,       "product_code": "2"     },     {       "product_qty": 3,       "amount_paid": 3,       "product_code": "3"     }   ] }';
+            ```
+    
+        * or use the Elastic way (in your project root) : 
+                
+            ```shell
+                curl -XPUT -H Content-Type:application/json  "http://localhost:9200/baskets/baskets/fe2ace53-69d6-4f11-93b1-e0fde68a95cc" -d@src/test/resources/basket1.json
+            ```
+    * run the app with `./gradlew run`
+    * do a search on the API :
+        ```shell
+            curl http://localhost:8080/basket/search
+            curl http://localhost:8080/basket/search?product_code=3
+        ```
+     
 # Testing reactive microservices with Micronaut, Elassandra and JUnit5
 
 [Micronaut](https://micronaut.io/) is a new JVM-based framework designed to make creating microservices quick and easy. One of the most exciting

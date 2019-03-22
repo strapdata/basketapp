@@ -106,7 +106,7 @@ run.classpath += configurations.developmentOnly
 test.classpath += configurations.developmentOnly
 run.jvmArgs('-noverify', '-XX:TieredStopAtLevel=1')
 
-mainClassName = "com.strapdata.demo.Application"
+mainClassName = "com.strapdata.basketapp.Application"
 
 // use JUnit 5 platform
 test {
