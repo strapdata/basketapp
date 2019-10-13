@@ -1,10 +1,8 @@
-IMAGE_NAME=basketapp
-IMAGE_VERSION = 0.1
 
 all: build deploy
 
 build:
-	./gradlew clean jib --image $(IMAGE_NAME):$(IMAGE_VERSION)
+	./gradlew clean jib
 
 deploy:
 	kubectl apply -f src/main/k8s/deployment.yaml
