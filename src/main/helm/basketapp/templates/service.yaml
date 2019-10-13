@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "basketapp.fullname" . }}
+  labels:
+    app: {{ template "basketapp.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+      name: strapkube
+    - port: 4242
+      protocol: TCP
+      targetPort: 4242
+      name: jdwp
+    - port: 7199
+      protocol: TCP
+      targetPort: 7199
+      name: jmx
+  selector:
+    app: {{ template "basketapp.name" . }}
+    release: {{ .Release.Name }}

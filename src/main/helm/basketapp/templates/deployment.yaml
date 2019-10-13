@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "basketapp.fullname" . }}
+  labels:
+    app: {{ template "basketapp.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app: basketapp
+  template:
+    metadata:
+      labels:
+        app: {{ template "basketapp.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: basketapp
+        image: strapdata/basketapp:0.2
+        imagePullPolicy: Always
+        terminationMessagePolicy: "FallbackToLogsOnError"
+        ports:
+        - containerPort: 8080
+        env:
+          - name: SERVICE_NAME
+            value: {{ template "basketapp.fullname" . }}
+          - name: CASSANDRA_PORT
+            value: {{ default "9042" .Values.cassandra.port | quote }}
+          - name: CASSANDRA_CLUSTERNAME
+            value: {{ .Values.cassandra.clusterName | quote }}
+          - name: CASSANDRA_CONTACTPOINT
+            value: {{ .Values.cassandra.contactPoint | quote }}
+          - name: ELASTICSEARCH_HOST
+            value: {{ .Values.elassandra.host | quote }}
+{{- if .Values.elassandra.username }}
+          - name: ELASSANDRA_AUTH_USERNAME
+            value: {{ .Values.elassandra.username | quote }}
+          - name: ELASSANDRA_AUTH_PASSWORD
+            value: {{ .Values.elassandra.password | quote }}
+{{- end }}
+{{- if .Values.elassandra.ssl.secretName }}
+          - name: ELASTICSEARCH_SCHEME
+            value: https
+          - name: ELASSANDRA_SSL_TRUSTSTORE
+            value: {{ .Values.elassandra.ssl.trustStore | quote }}
+          - name: ELASSANDRA_SSL_TRUSTSTOREPASS
+            value: {{ .Values.elassandra.ssl.trustPass | quote }}
+          - name: JAVA_OPTS
+            value: {{ printf "-Djavax.net.ssl.trustStore=%s -Djavax.net.ssl.trustStorePassword=%s" .Values.elassandra.ssl.trustStore .Values.elassandra.ssl.trustPass | quote }}
+        volumeMounts:
+        - name: truststore
+          mountPath: /truststore
+      volumes:
+        - name: truststore
+          secret:
+            defaultMode: 420
+            secretName: {{ .Values.elassandra.ssl.secretName | quote }}
+{{- end }}

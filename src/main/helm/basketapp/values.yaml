@@ -1,0 +1,22 @@
+
+cassandra:
+  port: 39042
+  clusterName: cl1
+  contactPoint: elassandra-cl1-dc1.default.svc.cluster.local
+
+elassandra:
+  host: elassandra-cl1-dc1-elasticsearch.default.svc.cluster.local
+  username: admin
+  password: "4048d055-0de3-451d-8e5b-788d00ab506e"
+  ssl:
+    secretName: ca-pub
+    trustStore: /truststore/truststore.p12
+    trustPass: "changeit"
+
+ingress:
+  enabled: false
+  hosts:
+    - basketapp.941a7aa2-kube1-azure-northeurope.azure.strapcloud.com
+  tls:
+    - hosts:
+      - basketapp.941a7aa2-kube1-azure-northeurope.azure.strapcloud.com
