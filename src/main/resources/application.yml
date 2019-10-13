@@ -1,7 +1,21 @@
 micronaut:
     application:
         name: basketapp
-
+    router:
+        static-resources:
+            swagger:
+                enabled: true
+                paths:
+                    - classpath:META-INF/swagger
+                    - classpath:swagger
+                mapping: /swagger/**
+    security:
+        enabled: false
+        interceptUrlMap:
+        - pattern: /swagger/**
+          httpMethod: GET
+          access:
+              - isAnonymous()
 jackson:
     serialization:
         indentOutput: true
