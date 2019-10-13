@@ -1,4 +1,4 @@
-package com.strapdata.basketapp;
+package com.strapdata.basketapp.model;
 
 import com.datastax.driver.mapping.Result;
 import com.datastax.driver.mapping.annotations.Accessor;

@@ -2,6 +2,7 @@ package com.strapdata.basketapp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.strapdata.basketapp.controllers.BasketController;
 import com.strapdata.basketapp.model.Basket;
 import com.strapdata.basketapp.model.BasketItem;
 import com.strapdata.basketapp.model.BasketStatus;
@@ -98,7 +99,7 @@ public class BasketControllerTest implements BeforeEachCallback, AfterEachCallba
     @Test
     public void testIndex() throws Exception {
         try(RxHttpClient client = server.getApplicationContext().createBean(RxHttpClient.class, server.getURL())) {
-            assertEquals(HttpStatus.OK, client.toBlocking().exchange(HttpRequest.GET("/basket/")).status());
+            assertEquals(HttpStatus.OK, client.toBlocking().exchange(HttpRequest.GET("/basketapp/basket/")).status());
         }
     }
 

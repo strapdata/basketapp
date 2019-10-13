@@ -1,12 +1,12 @@
-package com.strapdata.basketapp;
+package com.strapdata.basketapp.config;
 
 import io.micronaut.context.annotation.ConfigurationProperties;
 
 @ConfigurationProperties("elasticsearch")
 public class ElasticsearchConfiguration {
 
-    String scheme = "http";
-    String host = "localhost";
-    int port = 9200;
+    public String scheme = "http";
+    public String host = "localhost";
+    public int port = 9200;
 
 }
