@@ -9,7 +9,11 @@
         </encoder>
     </appender>
 
-    <root level="info">
+    <logger name="com.strapdata.basketapp" level="DEBUG" />
+    <logger name="com.datastax.driver.core.QueryLogger.NORMAL" level="DEBUG" />
+
+    <root level="WARN">
         <appender-ref ref="STDOUT" />
     </root>
+
 </configuration>
